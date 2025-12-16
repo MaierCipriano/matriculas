@@ -1,0 +1,4 @@
+com\example\authservice\config\FilterConfig.class
+com\example\authservice\controller\AuthController.class
+com\example\authservice\AuthServiceApplication.class
+com\example\authservice\security\ApiKeyFilter.class

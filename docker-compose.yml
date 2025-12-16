@@ -1,0 +1,263 @@
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - ENROLLMENT_SERVICE_URL=http://enrollment-service:9200
+      - SERVER_PORT=9000
+    depends_on:
+      enrollment-service:
+        condition: service_started
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+      dockerfile: Dockerfile
+    ports:
+      - "9200:9200"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MAIL_SERVICE_URL=http://mail-service:9102
+      - AUDIT_SERVICE_URL=http://audit-service:9103
+      - SERVER_PORT=9200
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    networks:
+      - user-service-network
+      - kafka-network
+    restart: on-failure:3
+
+  user-service:
+    build:
+      context: ./java-rabbitMQ-userCorreo
+      dockerfile: Dockerfile
+    ports:
+      - "9100:9100"
+    command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
+      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - APP_KAFKA_ENABLED=false
+      # Reactivar listener de RabbitMQ tras validación SMTP
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-guest}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-guest}
+      - APP_RABBITMQ_EXCHANGE=${RABBITMQ_EXCHANGE:-user-exchange}
+      - APP_RABBITMQ_QUEUE=${RABBITMQ_QUEUE:-email-queue}
+      - APP_RABBITMQ_ROUTINGKEY=${RABBITMQ_ROUTING_KEY:-email.notification}
+      # PostgreSQL
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/auditdb}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      - SPRING_JPA_DATABASE_PLATFORM=${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
+      # Server
+      - SERVER_PORT=9100
+    networks:
+      - user-service-network
+      - kafka-network
+    restart: on-failure:3
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "9101:9101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/auditdb}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      - SPRING_JPA_DATABASE_PLATFORM=${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
+      - APP_API_KEY=${APP_API_KEY:-changeme}
+      - SERVER_PORT=9101
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  mail-service:
+    build:
+      context: ./mail-service
+      dockerfile: Dockerfile
+    ports:
+      - "9102:9102"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - ./java-rabbitMQ-userCorreo/.env
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      # Reactivar listener de RabbitMQ tras comprobación
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-guest}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-guest}
+      - APP_RABBITMQ_EXCHANGE=${RABBITMQ_EXCHANGE:-user-exchange}
+      - APP_RABBITMQ_QUEUE=${RABBITMQ_QUEUE:-email-queue}
+      - APP_RABBITMQ_ROUTINGKEY=${RABBITMQ_ROUTING_KEY:-email.notification}
+      # SMTP (Mailtrap) tomado desde MAIL_* del env_file por application-docker.properties
+      - SERVER_PORT=9102
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  audit-service:
+    build:
+      context: ./audit-service
+      dockerfile: Dockerfile
+    ports:
+      - "9103:9103"
+    depends_on:
+      kafka:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - APP_KAFKA_AUDIT_TOPIC=${KAFKA_AUDIT_TOPIC:-audit-events}
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_SPRING_JSON_ADD_TYPE_HEADERS=false
+      - SERVER_PORT=9103
+    networks:
+      - kafka-network
+    restart: on-failure:3
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "${RABBITMQ_PORT:-5672}:${RABBITMQ_PORT:-5672}"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - user-service-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - kafka-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      # Algunas versiones de kafka-ui requieren la variante con guion bajo
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+    networks:
+      - kafka-network
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-auditdb}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - user-service-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  kafka-network:
+    driver: bridge
+  user-service-network:
+    driver: bridge
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  postgres_data:
+    driver: local

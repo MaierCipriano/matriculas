@@ -1,0 +1,23 @@
+server:
+  port: ${SERVER_PORT:9000}
+
+spring:
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      default-filters:
+        - RemoveRequestHeader=X-Forwarded-Prefix
+      routes:
+        - id: enrollments
+          uri: ${ENROLLMENT_SERVICE_URL:http://enrollment-service:9200}
+          predicates:
+            - Path=/api/enrollments/**
+          filters:
+            - StripPrefix=1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

@@ -1,0 +1,8 @@
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\messaging\MessageConsumer.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\service\EmailService.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\messaging\MessagePublisher.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\controller\EmailController.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\config\RabbitMQConfig.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\config\RabbitInfrastructureInitializer.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\MailServiceApplication.java
+D:\docker\proy17\mail-service\src\main\java\com\example\mailservice\model\EmailNotification.java

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrícula</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    form { max-width: 480px; display: grid; gap: 12px; }
+    label { font-weight: 600; }
+    input { padding: 8px; font-size: 14px; width: 100%; }
+    button { padding: 10px; font-size: 14px; cursor: pointer; }
+    .status { margin-top: 12px; }
+    .ok { color: #0a7; }
+    .err { color: #b00; }
+  </style>
+  <script>
+    async function submitEnrollment(event) {
+      event.preventDefault();
+      const status = document.getElementById('status');
+      const submitBtn = document.getElementById('submitBtn');
+      status.textContent = '';
+      status.className = 'status';
+      submitBtn.disabled = true;
+
+      const payload = {
+        studentName: document.getElementById('studentName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        courseName: document.getElementById('courseName').value.trim()
+      };
+
+      try {
+        const res = await fetch('/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+        if (res.ok) {
+          status.textContent = 'Matrícula enviada correctamente: ' + text;
+          status.className = 'status ok';
+        } else {
+          status.textContent = 'Error (' + res.status + '): ' + text;
+          status.className = 'status err';
+        }
+      } catch (err) {
+        status.textContent = 'Error de red: ' + err.message;
+        status.className = 'status err';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Rellenar fecha actual en campo read-only
+    document.addEventListener('DOMContentLoaded', () => {
+      const dateInput = document.getElementById('enrollmentDate');
+      if (dateInput) {
+        const now = new Date();
+        const formatted = now.toLocaleString();
+        dateInput.value = formatted;
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1>Formulario de Matrícula</h1>
+  <form onsubmit="submitEnrollment(event)">
+    <label>Nombre del estudiante
+        <input type="text" id="studentName" name="studentName" placeholder="Juan Perez" required />
+    </label>
+    <label>Correo electrónico
+        <input type="email" id="email" name="email" placeholder="juan@example.com" required />
+    </label>
+    <label>Curso
+        <input type="text" id="courseName" name="courseName" placeholder="Java Básico" required />
+    </label>
+    <label>Fecha
+        <input type="text" id="enrollmentDate" readonly />
+    </label>
+    <button id="submitBtn" type="submit">Registrar matrícula</button>
+    <div id="status" class="status"></div>
+  </form>
+
+  <p style="margin-top:16px;">
+    Nota: Este formulario envía un POST a <code>/enroll</code> y el servidor lo reenvía a la API de matrículas.
+  </p>
+</body>
+</html>

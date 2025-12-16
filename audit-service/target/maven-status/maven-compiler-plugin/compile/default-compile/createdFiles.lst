@@ -1,0 +1,4 @@
+com\example\auditservice\AuditServiceApplication.class
+com\example\auditservice\model\AuditEvent.class
+com\example\auditservice\messaging\AuditKafkaPublisher.class
+com\example\auditservice\controller\AuditController.class

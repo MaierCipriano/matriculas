@@ -1,0 +1,5 @@
+com\example\mailservice\MailServiceApplication.class
+com\example\mailservice\config\RabbitMQConfig.class
+com\example\mailservice\model\EmailNotification.class
+com\example\mailservice\controller\EmailController.class
+com\example\mailservice\messaging\MessagePublisher.class
