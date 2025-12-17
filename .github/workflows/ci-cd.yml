@@ -142,7 +142,7 @@ jobs:
           echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ secrets.AZURE_CONTAINER_REGISTRY }} --query loginServer -o tsv)" >> $GITHUB_ENV
 
       - name: Copy Compose file to VM
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
@@ -152,7 +152,7 @@ jobs:
           target: "~/proy17/docker-compose.vm.yml"
 
       - name: Deploy on VM via SSH
-        uses: appleboy/ssh-action@v0.1.19
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
