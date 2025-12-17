@@ -160,6 +160,7 @@ jobs:
           port: ${{ secrets.VM_SSH_PORT }}
           source: "deploy/docker-compose.vm.yml"
           target: "~/proy17/"
+          strip_components: 1
 
       - name: Deploy on VM via SSH
         uses: appleboy/ssh-action@v1
@@ -172,6 +173,16 @@ jobs:
             set -e
             mkdir -p ~/proy17
             cd ~/proy17
+            # Clean up incorrect directory from previous runs
+            if [ -d "./docker-compose.vm.yml" ]; then
+              echo "Found directory named docker-compose.vm.yml; removing to avoid compose error"
+              rm -rf ./docker-compose.vm.yml
+            fi
+            # If the file landed inside a deploy/ folder, move it up
+            if [ -f "./deploy/docker-compose.vm.yml" ]; then
+              mv -f ./deploy/docker-compose.vm.yml ./docker-compose.vm.yml
+            fi
+            ls -la
             echo "ACR_LOGIN_SERVER=${{ env.ACR_LOGIN_SERVER }}" > .env
             echo "TAG=${{ github.sha }}" >> .env
             # Optional SMTP for mail-service
