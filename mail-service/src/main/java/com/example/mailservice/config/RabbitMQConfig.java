@@ -13,6 +13,9 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 @Configuration
 @EnableRabbit
@@ -60,5 +63,20 @@ public class RabbitMQConfig {
         // Avoid auto-declare at context refresh; we declare manually when broker is ready
         admin.setAutoStartup(false);
         return admin;
+    }
+
+    // Provide a custom listener container factory that does NOT auto-start
+    // to avoid early connection attempts during application bootstrap
+    @Bean(name = "rabbitListenerContainerFactory")
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jsonMessageConverter());
+        factory.setAutoStartup(false);
+        // Be lenient if queues are missing at bootstrap; infra gets declared later
+        factory.setMismatchedQueuesFatal(false);
+        factory.setMissingQueuesFatal(false);
+        factory.setDefaultRequeueRejected(false);
+        return factory;
     }
 }
