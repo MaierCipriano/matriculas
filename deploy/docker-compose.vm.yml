@@ -1,0 +1,241 @@
+version: "3.8"
+
+services:
+  api-gateway:
+    image: ${ACR_LOGIN_SERVER}/api-gateway:${TAG}
+    ports:
+      - "9000:9000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - ENROLLMENT_SERVICE_URL=http://enrollment-service:9200
+      - SERVER_PORT=9000
+    depends_on:
+      enrollment-service:
+        condition: service_started
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  enrollment-service:
+    image: ${ACR_LOGIN_SERVER}/enrollment-service:${TAG}
+    ports:
+      - "9200:9200"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MAIL_SERVICE_URL=http://mail-service:9102
+      - AUDIT_SERVICE_URL=http://audit-service:9103
+      - SERVER_PORT=9200
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      audit-service:
+        condition: service_started
+    networks:
+      - user-service-network
+      - kafka-network
+    restart: on-failure:3
+
+  user-service:
+    image: ${ACR_LOGIN_SERVER}/user-service:${TAG}
+    ports:
+      - "9100:9100"
+    command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
+      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - APP_KAFKA_ENABLED=false
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - APP_RABBITMQ_EXCHANGE=user-exchange
+      - APP_RABBITMQ_QUEUE=email-queue
+      - APP_RABBITMQ_ROUTINGKEY=email.notification
+      # PostgreSQL
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auditdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      # Server
+      - SERVER_PORT=9100
+    networks:
+      - user-service-network
+      - kafka-network
+    restart: on-failure:3
+
+  auth-service:
+    image: ${ACR_LOGIN_SERVER}/auth-service:${TAG}
+    ports:
+      - "9101:9101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auditdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - APP_API_KEY=changeme
+      - SERVER_PORT=9101
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  mail-service:
+    image: ${ACR_LOGIN_SERVER}/mail-service:${TAG}
+    ports:
+      - "9102:9102"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - APP_RABBITMQ_EXCHANGE=user-exchange
+      - APP_RABBITMQ_QUEUE=email-queue
+      - APP_RABBITMQ_ROUTINGKEY=email.notification
+      # SMTP from .env
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - SERVER_PORT=9102
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
+  audit-service:
+    image: ${ACR_LOGIN_SERVER}/audit-service:${TAG}
+    ports:
+      - "9103:9103"
+    depends_on:
+      kafka:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - APP_KAFKA_AUDIT_TOPIC=audit-events
+      - SPRING_KAFKA_PRODUCER_PROPERTIES_SPRING_JSON_ADD_TYPE_HEADERS=false
+      - SERVER_PORT=9103
+    networks:
+      - kafka-network
+    restart: on-failure:3
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - user-service-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - kafka-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9092' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+    networks:
+      - kafka-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=auditdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - user-service-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  kafka-network:
+  user-service-network:
+
+volumes:
+  rabbitmq_data:
+  zookeeper_data:
+  kafka_data:
+  postgres_data:
