@@ -36,42 +36,44 @@ services:
     restart: on-failure:3
 
   user-service:
-    image: ${ACR_LOGIN_SERVER}/user-service:${TAG}
-    ports:
-      - "9100:9100"
-    command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
-      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - APP_KAFKA_ENABLED=false
-      # RabbitMQ
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
-      - APP_RABBITMQ_EXCHANGE=user-exchange
-      - APP_RABBITMQ_QUEUE=email-queue
-      - APP_RABBITMQ_ROUTINGKEY=email.notification
-      # PostgreSQL
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auditdb
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
-      # Server
-      - SERVER_PORT=9100
-    networks:
-      - user-service-network
-      - kafka-network
-    restart: on-failure:3
+    # Servicio omitido intencionalmente en despliegue
+    # Para reactivarlo, descomenta y asegúrate de construir/pushear la imagen en ACR
+    # image: ${ACR_LOGIN_SERVER}/user-service:${TAG}
+    # ports:
+    #   - "9100:9100"
+    # command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
+    # depends_on:
+    #   rabbitmq:
+    #     condition: service_healthy
+    #   postgres:
+    #     condition: service_healthy
+    # environment:
+    #   - SPRING_PROFILES_ACTIVE=docker
+    #   - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
+    #   - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+    #   - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    #   - APP_KAFKA_ENABLED=false
+    #   # RabbitMQ
+    #   - SPRING_RABBITMQ_HOST=rabbitmq
+    #   - SPRING_RABBITMQ_PORT=5672
+    #   - SPRING_RABBITMQ_USERNAME=guest
+    #   - SPRING_RABBITMQ_PASSWORD=guest
+    #   - APP_RABBITMQ_EXCHANGE=user-exchange
+    #   - APP_RABBITMQ_QUEUE=email-queue
+    #   - APP_RABBITMQ_ROUTINGKEY=email.notification
+    #   # PostgreSQL
+    #   - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/auditdb
+    #   - SPRING_DATASOURCE_USERNAME=postgres
+    #   - SPRING_DATASOURCE_PASSWORD=postgres
+    #   - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+    #   - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    #   - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+    #   # Server
+    #   - SERVER_PORT=9100
+    # networks:
+    #   - user-service-network
+    #   - kafka-network
+    # restart: on-failure:3
 
   auth-service:
     image: ${ACR_LOGIN_SERVER}/auth-service:${TAG}

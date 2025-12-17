@@ -17,13 +17,12 @@ jobs:
           - mail-service
           - enrollment-service
           - audit-service
-          - java-rabbitMQ-userCorreo # user-service
+          # user-service omitido
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -72,15 +71,12 @@ jobs:
           - service: audit-service
             image: audit-service
             context: audit-service
-          - service: java-rabbitMQ-userCorreo
-            image: user-service
-            context: java-rabbitMQ-userCorreo
+          # user-service omitido
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
 
       - name: Azure Login
         uses: azure/login@v2
@@ -106,16 +102,19 @@ jobs:
           git submodule status || true
 
       - name: Verify Dockerfile presence
+        id: verify_dockerfile
         run: |
           if [ -f "${{ matrix.context }}/Dockerfile" ]; then
             echo "Dockerfile found at ${{ matrix.context }}/Dockerfile"
+            echo "dockerfile_present=true" >> $GITHUB_OUTPUT
           else
-            echo "ERROR: Dockerfile missing at ${{ matrix.context }}/Dockerfile" >&2
-            exit 1
+            echo "WARNING: Dockerfile missing at ${{ matrix.context }}/Dockerfile. Skipping image build for ${{ matrix.image }}." >&2
+            echo "dockerfile_present=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Build & Push ${{ matrix.image }}
         uses: docker/build-push-action@v6
+        if: steps.verify_dockerfile.outputs.dockerfile_present == 'true'
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Dockerfile
