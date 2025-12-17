@@ -86,7 +86,7 @@ services:
       - SERVER_PORT=9102
     networks:
       - user-service-network
-    restart: on-failure:3
+    restart: unless-stopped
     healthcheck:
       # Use CMD-SHELL to ensure consistent parsing across Compose versions
       test: ["CMD-SHELL", "java -version"]
@@ -129,7 +129,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.2
