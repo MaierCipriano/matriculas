@@ -150,6 +150,10 @@ jobs:
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
             mkdir -p ~/proy17
+            # Remove mistakenly created directory that conflicts with file upload
+            if [ -d "~/proy17/docker-compose.vm.yml" ]; then
+              rm -rf ~/proy17/docker-compose.vm.yml
+            fi
 
       - name: Copy Compose file to VM
         uses: appleboy/scp-action@v1
