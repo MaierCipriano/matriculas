@@ -37,8 +37,9 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Build & Test ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
         run: |
-          mvn -B -f ${{ matrix.service }}/pom.xml clean test package
+          mvn -B clean test package
 
   docker-build-push:
     name: Build & Push Docker Images to ACR
