@@ -57,27 +57,21 @@ jobs:
           - service: api-gateway
             image: api-gateway
             context: api-gateway
-            dockerfile: api-gateway/Dockerfile
           - service: auth-service
             image: auth-service
             context: auth-service
-            dockerfile: auth-service/Dockerfile
           - service: mail-service
             image: mail-service
             context: mail-service
-            dockerfile: mail-service/Dockerfile
           - service: enrollment-service
             image: enrollment-service
             context: enrollment-service
-            dockerfile: enrollment-service/Dockerfile
           - service: audit-service
             image: audit-service
             context: audit-service
-            dockerfile: audit-service/Dockerfile
           - service: java-rabbitMQ-userCorreo
             image: user-service
             context: java-rabbitMQ-userCorreo
-            dockerfile: java-rabbitMQ-userCorreo/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,11 +92,15 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Debug context contents
+        run: |
+          echo "Listing contents of ${{ matrix.context }}"
+          ls -la ${{ matrix.context }}
+
       - name: Build & Push ${{ matrix.image }}
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
