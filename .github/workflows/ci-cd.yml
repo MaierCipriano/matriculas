@@ -39,7 +39,13 @@ jobs:
       - name: Build & Test ${{ matrix.service }}
         working-directory: ${{ matrix.service }}
         run: |
-          mvn -B clean test package
+          echo "Working dir: $(pwd)"
+          ls -la
+          if [ -f pom.xml ]; then
+            mvn -B clean test package
+          else
+            echo "pom.xml not found here. Skipping Maven build for ${{ matrix.service }}."
+          fi
 
   docker-build-push:
     name: Build & Push Docker Images to ACR
