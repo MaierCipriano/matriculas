@@ -37,13 +37,15 @@ public class RabbitInfrastructureInitializer {
     @EventListener(ApplicationReadyEvent.class)
     public void declareWithRetry() {
         int attempts = 0;
-        int maxAttempts = 20; // ~60s con 3s de espera
+        int maxAttempts = 40; // ~120s con 3s de espera
         long sleepMillis = 3000;
 
         while (attempts < maxAttempts) {
             attempts++;
             try {
+                // touch broker to confirm connection
                 rabbitAdmin.getQueueProperties(queue.getName());
+                // declare infra once broker responds
                 rabbitAdmin.declareExchange(exchange);
                 rabbitAdmin.declareQueue(queue);
                 rabbitAdmin.declareBinding(binding);

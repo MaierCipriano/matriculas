@@ -56,6 +56,9 @@ public class RabbitMQConfig {
 
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
-        return new RabbitAdmin(connectionFactory);
+        RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+        // Avoid auto-declare at context refresh; we declare manually when broker is ready
+        admin.setAutoStartup(false);
+        return admin;
     }
 }
