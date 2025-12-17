@@ -9,6 +9,7 @@ import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 
 @Component
 public class RabbitInfrastructureInitializer {
@@ -19,12 +20,18 @@ public class RabbitInfrastructureInitializer {
     private final Queue queue;
     private final TopicExchange exchange;
     private final Binding binding;
+    private final RabbitListenerEndpointRegistry listenerRegistry;
 
-    public RabbitInfrastructureInitializer(RabbitAdmin rabbitAdmin, Queue queue, TopicExchange exchange, Binding binding) {
+    public RabbitInfrastructureInitializer(RabbitAdmin rabbitAdmin,
+                                          Queue queue,
+                                          TopicExchange exchange,
+                                          Binding binding,
+                                          RabbitListenerEndpointRegistry listenerRegistry) {
         this.rabbitAdmin = rabbitAdmin;
         this.queue = queue;
         this.exchange = exchange;
         this.binding = binding;
+        this.listenerRegistry = listenerRegistry;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -42,6 +49,13 @@ public class RabbitInfrastructureInitializer {
                 rabbitAdmin.declareBinding(binding);
                 logger.info("RabbitMQ infrastructure declared: exchange={}, queue={}, binding created",
                         exchange.getName(), queue.getName());
+                try {
+                    // Start listeners only after the broker is reachable and infrastructure is declared
+                    listenerRegistry.start();
+                    logger.info("Rabbit listeners started successfully after broker became ready.");
+                } catch (Exception startEx) {
+                    logger.warn("Could not start rabbit listeners yet: {}", startEx.getMessage());
+                }
                 return;
             } catch (Exception e) {
                 logger.warn("RabbitMQ not ready yet (attempt {}/{}): {}", attempts, maxAttempts, e.getMessage());

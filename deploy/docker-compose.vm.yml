@@ -69,7 +69,7 @@ services:
         condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=false
       # RabbitMQ
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
