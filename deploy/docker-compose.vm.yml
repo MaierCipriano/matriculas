@@ -88,12 +88,12 @@ services:
       - user-service-network
     restart: on-failure:3
     healthcheck:
-      # Minimal check that JVM is available; avoids false unhealthy states
-      test: ["CMD", "java", "-version"]
+      # Use CMD-SHELL to ensure consistent parsing across Compose versions
+      test: ["CMD-SHELL", "java -version"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 30s
 
   audit-service:
     image: ${ACR_LOGIN_SERVER}/audit-service:${TAG}
