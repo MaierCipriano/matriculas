@@ -114,8 +114,8 @@ services:
       - ./java-rabbitMQ-userCorreo/.env
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      # Reactivar listener de RabbitMQ tras comprobación
-      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+      # Mantener listener desactivado hasta que RabbitMQ esté listo
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=false
       # RabbitMQ
       - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
       - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
@@ -166,7 +166,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.2
