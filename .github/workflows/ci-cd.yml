@@ -202,4 +202,23 @@ jobs:
             if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
 
             $DC --env-file .env -f ./docker-compose.vm.yml pull
+            # Run compose up and collect diagnostics if it fails
+            set +e
             $DC --env-file .env -f ./docker-compose.vm.yml up -d --remove-orphans
+            UP_EXIT=$?
+            set -e
+
+            echo "==== Docker Compose PS ===="
+            $DC -f ./docker-compose.vm.yml ps || true
+
+            echo "==== Logs: mail-service (last 150 lines) ===="
+            $DC -f ./docker-compose.vm.yml logs --no-color --tail=150 mail-service || true
+
+            echo "==== Docker inspect: mail-service ===="
+            MID=$(docker ps -aq -f name=proy17_mail-service_1)
+            [ -n "$MID" ] && docker inspect "$MID" | head -n 200 || true
+
+            if [ "$UP_EXIT" -ne 0 ]; then
+              echo "Compose up failed with exit code $UP_EXIT"
+              exit "$UP_EXIT"
+            fi
