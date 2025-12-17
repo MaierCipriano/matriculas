@@ -106,8 +106,7 @@ services:
     build:
       context: ./mail-service
       dockerfile: Dockerfile
-    ports:
-      - "9102:9102"
+    # Avoid host port binding issues on Windows; run inside network only
     depends_on:
       rabbitmq:
         condition: service_healthy
