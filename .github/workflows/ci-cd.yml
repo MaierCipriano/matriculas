@@ -2,7 +2,7 @@ name: CI-CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -156,95 +156,3 @@ jobs:
 
             $DC --env-file .env -f docker-compose.vm.yml pull
             $DC --env-file .env -f docker-compose.vm.yml up -d --remove-orphans
-
-      # ---------------- Auth Service ----------------
-      - name: Configure Auth Web App container (ACR image)
-        run: |
-          az webapp config container set \
-            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            -n "${{ secrets.AZURE_WEBAPP_AUTH }}" \
-            --docker-custom-image-name "${{ env.ACR_LOGIN_SERVER }}/auth-service:${{ github.sha }}" \
-            --docker-registry-server-url "https://${{ env.ACR_LOGIN_SERVER }}" \
-            --docker-registry-server-user "${{ secrets.ACR_USERNAME }}" \
-            --docker-registry-server-password "${{ secrets.ACR_PASSWORD }}"
-
-      - name: Set Auth app settings (port, profile & PostgreSQL)
-        env:
-          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
-          SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${{ secrets.SPRING_DATASOURCE_DRIVER_CLASS_NAME }}
-          SPRING_JPA_HIBERNATE_DDL_AUTO: ${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}
-          SPRING_JPA_DATABASE_PLATFORM: ${{ secrets.SPRING_JPA_DATABASE_PLATFORM }}
-          APP_API_KEY: ${{ secrets.APP_API_KEY }}
-        run: |
-          SETTINGS="WEBSITES_PORT=9101 SPRING_PROFILES_ACTIVE=docker"
-          [ -n "$SPRING_DATASOURCE_URL" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_URL=$SPRING_DATASOURCE_URL"
-          [ -n "$SPRING_DATASOURCE_USERNAME" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_USERNAME=$SPRING_DATASOURCE_USERNAME"
-          [ -n "$SPRING_DATASOURCE_PASSWORD" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_PASSWORD=$SPRING_DATASOURCE_PASSWORD"
-          [ -n "$SPRING_DATASOURCE_DRIVER_CLASS_NAME" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_DRIVER_CLASS_NAME=$SPRING_DATASOURCE_DRIVER_CLASS_NAME"
-          [ -n "$SPRING_JPA_HIBERNATE_DDL_AUTO" ] && SETTINGS="$SETTINGS SPRING_JPA_HIBERNATE_DDL_AUTO=$SPRING_JPA_HIBERNATE_DDL_AUTO"
-          [ -n "$SPRING_JPA_DATABASE_PLATFORM" ] && SETTINGS="$SETTINGS SPRING_JPA_DATABASE_PLATFORM=$SPRING_JPA_DATABASE_PLATFORM"
-          [ -n "$APP_API_KEY" ] && SETTINGS="$SETTINGS APP_API_KEY=$APP_API_KEY"
-          az webapp config appsettings set \
-            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            -n "${{ secrets.AZURE_WEBAPP_AUTH }}" \
-            --settings $SETTINGS
-
-      - name: Restart Auth Web App
-        run: az webapp restart -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n "${{ secrets.AZURE_WEBAPP_AUTH }}"
-
-      # ---------------- User Service ----------------
-      - name: Configure User Web App container (ACR image)
-        run: |
-          az webapp config container set \
-            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            -n "${{ secrets.AZURE_WEBAPP_USER }}" \
-            --docker-custom-image-name "${{ env.ACR_LOGIN_SERVER }}/user-service:${{ github.sha }}" \
-            --docker-registry-server-url "https://${{ env.ACR_LOGIN_SERVER }}" \
-            --docker-registry-server-user "${{ secrets.ACR_USERNAME }}" \
-            --docker-registry-server-password "${{ secrets.ACR_PASSWORD }}"
-
-      - name: Set User app settings (port, profile, API URL & integrations)
-        env:
-          AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
-          SPRING_KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
-          APP_KAFKA_ENABLED: ${{ secrets.APP_KAFKA_ENABLED }}
-          SPRING_RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
-          SPRING_RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
-          SPRING_RABBITMQ_USERNAME: ${{ secrets.RABBITMQ_USER }}
-          SPRING_RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASS }}
-          APP_RABBITMQ_EXCHANGE: ${{ secrets.RABBITMQ_EXCHANGE }}
-          APP_RABBITMQ_QUEUE: ${{ secrets.RABBITMQ_QUEUE }}
-          APP_RABBITMQ_ROUTINGKEY: ${{ secrets.RABBITMQ_ROUTING_KEY }}
-          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
-          SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${{ secrets.SPRING_DATASOURCE_DRIVER_CLASS_NAME }}
-          SPRING_JPA_HIBERNATE_DDL_AUTO: ${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}
-          SPRING_JPA_DATABASE_PLATFORM: ${{ secrets.SPRING_JPA_DATABASE_PLATFORM }}
-        run: |
-          ENROLLMENTS_API="https://${AZURE_WEBAPP_NAME}.azurewebsites.net/api/enrollments"
-          SETTINGS="WEBSITES_PORT=9100 SPRING_PROFILES_ACTIVE=docker APP_ENROLLMENTS_API=$ENROLLMENTS_API"
-          [ -n "$SPRING_KAFKA_BOOTSTRAP_SERVERS" ] && SETTINGS="$SETTINGS SPRING_KAFKA_BOOTSTRAP_SERVERS=$SPRING_KAFKA_BOOTSTRAP_SERVERS"
-          [ -n "$APP_KAFKA_ENABLED" ] && SETTINGS="$SETTINGS APP_KAFKA_ENABLED=$APP_KAFKA_ENABLED"
-          [ -n "$SPRING_RABBITMQ_HOST" ] && SETTINGS="$SETTINGS SPRING_RABBITMQ_HOST=$SPRING_RABBITMQ_HOST"
-          [ -n "$SPRING_RABBITMQ_PORT" ] && SETTINGS="$SETTINGS SPRING_RABBITMQ_PORT=$SPRING_RABBITMQ_PORT"
-          [ -n "$SPRING_RABBITMQ_USERNAME" ] && SETTINGS="$SETTINGS SPRING_RABBITMQ_USERNAME=$SPRING_RABBITMQ_USERNAME"
-          [ -n "$SPRING_RABBITMQ_PASSWORD" ] && SETTINGS="$SETTINGS SPRING_RABBITMQ_PASSWORD=$SPRING_RABBITMQ_PASSWORD"
-          [ -n "$APP_RABBITMQ_EXCHANGE" ] && SETTINGS="$SETTINGS APP_RABBITMQ_EXCHANGE=$APP_RABBITMQ_EXCHANGE"
-          [ -n "$APP_RABBITMQ_QUEUE" ] && SETTINGS="$SETTINGS APP_RABBITMQ_QUEUE=$APP_RABBITMQ_QUEUE"
-          [ -n "$APP_RABBITMQ_ROUTINGKEY" ] && SETTINGS="$SETTINGS APP_RABBITMQ_ROUTINGKEY=$APP_RABBITMQ_ROUTINGKEY"
-          [ -n "$SPRING_DATASOURCE_URL" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_URL=$SPRING_DATASOURCE_URL"
-          [ -n "$SPRING_DATASOURCE_USERNAME" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_USERNAME=$SPRING_DATASOURCE_USERNAME"
-          [ -n "$SPRING_DATASOURCE_PASSWORD" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_PASSWORD=$SPRING_DATASOURCE_PASSWORD"
-          [ -n "$SPRING_DATASOURCE_DRIVER_CLASS_NAME" ] && SETTINGS="$SETTINGS SPRING_DATASOURCE_DRIVER_CLASS_NAME=$SPRING_DATASOURCE_DRIVER_CLASS_NAME"
-          [ -n "$SPRING_JPA_HIBERNATE_DDL_AUTO" ] && SETTINGS="$SETTINGS SPRING_JPA_HIBERNATE_DDL_AUTO=$SPRING_JPA_HIBERNATE_DDL_AUTO"
-          [ -n "$SPRING_JPA_DATABASE_PLATFORM" ] && SETTINGS="$SETTINGS SPRING_JPA_DATABASE_PLATFORM=$SPRING_JPA_DATABASE_PLATFORM"
-          az webapp config appsettings set \
-            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            -n "${{ secrets.AZURE_WEBAPP_USER }}" \
-            --settings $SETTINGS
-
-      - name: Restart User Web App
-        run: az webapp restart -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n "${{ secrets.AZURE_WEBAPP_USER }}"
