@@ -141,6 +141,16 @@ jobs:
         run: |
           echo "ACR_LOGIN_SERVER=$(az acr show --name ${{ secrets.AZURE_CONTAINER_REGISTRY }} --query loginServer -o tsv)" >> $GITHUB_ENV
 
+      - name: Ensure remote project dir
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_SSH_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_SSH_PORT }}
+          script: |
+            mkdir -p ~/proy17
+
       - name: Copy Compose file to VM
         uses: appleboy/scp-action@v1
         with:
@@ -149,7 +159,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           port: ${{ secrets.VM_SSH_PORT }}
           source: "deploy/docker-compose.vm.yml"
-          target: "~/proy17/docker-compose.vm.yml"
+          target: "~/proy17/"
 
       - name: Deploy on VM via SSH
         uses: appleboy/ssh-action@v1
@@ -176,5 +186,5 @@ jobs:
             # Detect docker compose command
             if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
 
-            $DC --env-file .env -f docker-compose.vm.yml pull
-            $DC --env-file .env -f docker-compose.vm.yml up -d --remove-orphans
+            $DC --env-file .env -f ./docker-compose.vm.yml pull
+            $DC --env-file .env -f ./docker-compose.vm.yml up -d --remove-orphans
