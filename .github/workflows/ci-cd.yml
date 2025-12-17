@@ -32,7 +32,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles(matrix.service + '/pom.xml') }}
+          key: ${{ runner.os }}-maven-${{ hashFiles(format('{0}/pom.xml', matrix.service)) }}
           restore-keys: |
             ${{ runner.os }}-maven-
 
