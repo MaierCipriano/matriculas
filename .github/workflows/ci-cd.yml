@@ -97,10 +97,20 @@ jobs:
           echo "Listing contents of ${{ matrix.context }}"
           ls -la ${{ matrix.context }}
 
+      - name: Verify Dockerfile presence
+        run: |
+          if [ -f "${{ matrix.context }}/Dockerfile" ]; then
+            echo "Dockerfile found at ${{ matrix.context }}/Dockerfile"
+          else
+            echo "ERROR: Dockerfile missing at ${{ matrix.context }}/Dockerfile" >&2
+            exit 1
+          fi
+
       - name: Build & Push ${{ matrix.image }}
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
           push: true
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
