@@ -215,7 +215,11 @@ jobs:
             # CLEANUP: Force remove containers BEFORE down to prevent network removal errors
             # and bypass docker-compose 1.x 'ContainerConfig' bugs.
             echo "Force removing containers first..."
-            docker ps -aq --filter name=proy17 | xargs -r docker rm -f || true
+            # Remove all containers, including those from previous failed runs or different project names
+            docker ps -aq | xargs -r docker rm -f || true
+            
+            # Prune networks to ensure port 9300 is released
+            docker network prune -f || true
             
             echo "Removing networks and volumes..."
             $DC --env-file .env -f ./docker-compose.vm.yml down --remove-orphans || true
