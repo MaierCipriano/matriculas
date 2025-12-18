@@ -74,42 +74,41 @@ services:
       - user-service-network
     restart: on-failure:3
 
-  # mail-service:
-  #   image: ${ACR_LOGIN_SERVER}/mail-service:${TAG}
-  #   ports:
-  #     - "9102:9102"
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     enrollment-webapp:
-  #       condition: service_started
-  #   environment:
-  #     - SPRING_PROFILES_ACTIVE=docker
-  #     - APP_RABBITMQ_LISTENER_AUTO_STARTUP=false
-  #     # RabbitMQ
-  #     - SPRING_RABBITMQ_HOST=rabbitmq
-  #     - SPRING_RABBITMQ_PORT=5672
-  #     - SPRING_RABBITMQ_USERNAME=guest
-  #     - SPRING_RABBITMQ_PASSWORD=guest
-  #     - APP_RABBITMQ_EXCHANGE=user-exchange
-  #     - APP_RABBITMQ_QUEUE=email-queue
-  #     - APP_RABBITMQ_ROUTINGKEY=email.notification
-  #     # SMTP with safe defaults if secrets are not provided
-  #     - MAIL_HOST=${MAIL_HOST:-sandbox.smtp.mailtrap.io}
-  #     - MAIL_PORT=${MAIL_PORT:-2525}
-  #     - MAIL_USERNAME=${MAIL_USERNAME:-7150a6ec81a0c1}
-  #     - MAIL_PASSWORD=${MAIL_PASSWORD:-958d190ad2d245}
-  #     - SERVER_PORT=9102
-  #   networks:
-  #     - user-service-network
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     # Use CMD-SHELL to ensure consistent parsing across Compose versions
-  #     test: ["CMD-SHELL", "java -version"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 30s
+  mail-service:
+    image: ${ACR_LOGIN_SERVER}/mail-service:${TAG}
+    ports:
+      - "9102:9102"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      # enrollment-webapp removed from depends_on to avoid circular or complex deps
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=false
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - APP_RABBITMQ_EXCHANGE=user-exchange
+      - APP_RABBITMQ_QUEUE=email-queue
+      - APP_RABBITMQ_ROUTINGKEY=email.notification
+      # SMTP with safe defaults if secrets are not provided
+      - MAIL_HOST=${MAIL_HOST:-sandbox.smtp.mailtrap.io}
+      - MAIL_PORT=${MAIL_PORT:-2525}
+      - MAIL_USERNAME=${MAIL_USERNAME:-7150a6ec81a0c1}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-958d190ad2d245}
+      - SERVER_PORT=9102
+    networks:
+      - user-service-network
+    restart: unless-stopped
+    healthcheck:
+      # Use CMD-SHELL to ensure consistent parsing across Compose versions
+      test: ["CMD-SHELL", "java -version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   audit-service:
     image: ${ACR_LOGIN_SERVER}/audit-service:${TAG}
