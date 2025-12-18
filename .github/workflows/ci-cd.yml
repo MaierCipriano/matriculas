@@ -17,7 +17,6 @@ jobs:
           - mail-service
           - enrollment-service
           - audit-service
-          - enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
@@ -72,9 +71,6 @@ jobs:
           - service: audit-service
             image: audit-service
             context: audit-service
-          - service: enrollment-webapp
-            image: enrollment-webapp
-            context: enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
@@ -151,22 +147,18 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
             mkdir -p ~/proy17
-            # Remove mistakenly created directory that conflicts with file upload
-            if [ -d "~/proy17/docker-compose.vm.yml" ]; then
-              rm -rf ~/proy17/docker-compose.vm.yml
-            fi
-
+            # Always remove the existing compose file/directory to force a fresh copy
+            rm -rf ~/proy17/docker-compose.vm.yml
+            
       - name: Copy Compose file to VM
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           source: "deploy/docker-compose.vm.yml"
           target: "~/proy17/"
@@ -178,7 +170,6 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
             set -e
@@ -193,6 +184,11 @@ jobs:
             if [ -f "./deploy/docker-compose.vm.yml" ]; then
               mv -f ./deploy/docker-compose.vm.yml ./docker-compose.vm.yml
             fi
+            
+            echo "==== Debug: Content of docker-compose.vm.yml ===="
+            cat ./docker-compose.vm.yml
+            echo "==============================================="
+            
             ls -la
             echo "ACR_LOGIN_SERVER=${{ env.ACR_LOGIN_SERVER }}" > .env
             echo "TAG=${{ github.sha }}" >> .env
