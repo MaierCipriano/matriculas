@@ -220,9 +220,6 @@ jobs:
             echo "==== Docker Compose PS ===="
             $DC -f ./docker-compose.vm.yml ps || true
 
-            echo "==== Logs: mail-service (last 150 lines) ===="
-            $DC -f ./docker-compose.vm.yml logs --no-color --tail=150 mail-service || true
-
             echo "==== Docker Compose Config (resolved) ===="
             $DC -f ./docker-compose.vm.yml config || true        
 
