@@ -44,8 +44,7 @@ services:
       - WEB_ADDRESS=0.0.0.0
       - ENROLLMENT_API_URL=http://enrollment-service:9200/enrollments
     depends_on:
-      enrollment-service:
-        condition: service_started
+      - enrollment-service
     networks:
       - user-service-network
     restart: on-failure:3

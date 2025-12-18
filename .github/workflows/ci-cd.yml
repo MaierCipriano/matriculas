@@ -213,9 +213,15 @@ jobs:
             $DC --env-file .env -f ./docker-compose.vm.yml pull
             # Run compose up and collect diagnostics if it fails
             set +e
-            $DC --env-file .env -f ./docker-compose.vm.yml up -d --remove-orphans
+            echo "Starting docker compose up..."
+            $DC --env-file .env -f ./docker-compose.vm.yml up -d --remove-orphans > compose_up_output.txt 2>&1
             UP_EXIT=$?
             set -e
+
+            if [ "$UP_EXIT" -ne 0 ]; then
+               echo "==== Docker Compose Up Failed ===="
+               cat compose_up_output.txt
+            fi
 
             echo "==== Docker Compose PS ===="
             $DC -f ./docker-compose.vm.yml ps || true
