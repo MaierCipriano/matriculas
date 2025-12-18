@@ -224,17 +224,7 @@ jobs:
             $DC -f ./docker-compose.vm.yml logs --no-color --tail=150 mail-service || true
 
             echo "==== Docker Compose Config (resolved) ===="
-            $DC -f ./docker-compose.vm.yml config || true
-
-            echo "==== Docker inspect: mail-service ===="
-            MID=$(docker ps -aq -f name=proy17_mail-service_1)
-            [ -n "$MID" ] && docker inspect "$MID" | head -n 200 || true
-
-            echo "==== Docker ps -a ===="
-            docker ps -a || true
-
-            echo "==== Docker logs (container) mail-service last 200 lines ===="
-            [ -n "$MID" ] && docker logs --tail=200 "$MID" || true
+            $DC -f ./docker-compose.vm.yml config || true        
 
             if [ "$UP_EXIT" -ne 0 ]; then
               echo "Compose up failed with exit code $UP_EXIT"
