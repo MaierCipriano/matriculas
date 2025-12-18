@@ -17,6 +17,7 @@ jobs:
           - mail-service
           - enrollment-service
           - audit-service
+          - enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
@@ -71,6 +72,9 @@ jobs:
           - service: audit-service
             image: audit-service
             context: audit-service
+          - service: enrollment-webapp
+            image: enrollment-webapp
+            context: enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
@@ -147,6 +151,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
             mkdir -p ~/proy17
@@ -161,6 +166,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           source: "deploy/docker-compose.vm.yml"
           target: "~/proy17/"
@@ -172,6 +178,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          password: ${{ secrets.VM_SSH_PASSWORD }}
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
             set -e

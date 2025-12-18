@@ -35,6 +35,21 @@ services:
       - kafka-network
     restart: on-failure:3
 
+  enrollment-webapp:
+    image: ${ACR_LOGIN_SERVER}/enrollment-webapp:${TAG}
+    ports:
+      - "9300:9300"
+    environment:
+      - WEB_PORT=9300
+      - WEB_ADDRESS=0.0.0.0
+      - ENROLLMENT_API_URL=http://enrollment-service:9200/enrollments
+    depends_on:
+      enrollment-service:
+        condition: service_started
+    networks:
+      - user-service-network
+    restart: on-failure:3
+
   # user-service omitido intencionalmente en despliegue
   # Para reactivarlo, agrega la definición completa del servicio y asegúrate
   # de construir y publicar la imagen en ACR.
