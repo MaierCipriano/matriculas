@@ -37,47 +37,64 @@ services:
       - kafka-network
     restart: on-failure:3
 
-  user-service:
+  enrollment-webapp:
     build:
-      context: ./java-rabbitMQ-userCorreo
+      context: ./enrollment-webapp
       dockerfile: Dockerfile
     ports:
-      - "9100:9100"
-    command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - "9300:9300"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
-      - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - APP_KAFKA_ENABLED=false
-      # Reactivar listener de RabbitMQ tras validación SMTP
-      - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
-      # RabbitMQ
-      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-guest}
-      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-guest}
-      - APP_RABBITMQ_EXCHANGE=${RABBITMQ_EXCHANGE:-user-exchange}
-      - APP_RABBITMQ_QUEUE=${RABBITMQ_QUEUE:-email-queue}
-      - APP_RABBITMQ_ROUTINGKEY=${RABBITMQ_ROUTING_KEY:-email.notification}
-      # PostgreSQL
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/auditdb}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-      - SPRING_JPA_DATABASE_PLATFORM=${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
-      # Server
-      - SERVER_PORT=9100
+      - WEB_PORT=9300
+      - WEB_ADDRESS=0.0.0.0
+      - ENROLLMENT_API_URL=http://enrollment-service:9200/enrollments
+    depends_on:
+      enrollment-service:
+        condition: service_started
     networks:
       - user-service-network
-      - kafka-network
     restart: on-failure:3
+
+  # user-service:
+  #   build:
+  #     context: ./java-rabbitMQ-userCorreo
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "9100:9100"
+  #   command: ["sh", "-c", "exec java -Dspring.profiles.active=docker -cp app.jar:lib/* org.springframework.boot.loader.JarLauncher"]
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=docker
+  #     - APP_ENROLLMENTS_API=http://api-gateway:9000/api/enrollments
+  #     - SPRING_KAFKA_LISTENER_AUTO_STARTUP=false
+  #     - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - APP_KAFKA_ENABLED=false
+  #     # Reactivar listener de RabbitMQ tras validación SMTP
+  #     - APP_RABBITMQ_LISTENER_AUTO_STARTUP=true
+  #     # RabbitMQ
+  #     - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+  #     - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+  #     - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-guest}
+  #     - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS:-guest}
+  #     - APP_RABBITMQ_EXCHANGE=${RABBITMQ_EXCHANGE:-user-exchange}
+  #     - APP_RABBITMQ_QUEUE=${RABBITMQ_QUEUE:-email-queue}
+  #     - APP_RABBITMQ_ROUTINGKEY=${RABBITMQ_ROUTING_KEY:-email.notification}
+  #     # PostgreSQL
+  #     - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/auditdb}
+  #     - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
+  #     - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
+  #     - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+  #     - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+  #     - SPRING_JPA_DATABASE_PLATFORM=${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
+  #     # Server
+  #     - SERVER_PORT=9100
+  #   networks:
+  #     - user-service-network
+  #     - kafka-network
+  #   restart: on-failure:3
 
   auth-service:
     build:
@@ -110,8 +127,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    env_file:
-      - ./java-rabbitMQ-userCorreo/.env
+      enrollment-webapp:
+        condition: service_started
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       # Mantener listener desactivado hasta que RabbitMQ esté listo
