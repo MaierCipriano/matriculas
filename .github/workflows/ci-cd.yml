@@ -62,6 +62,9 @@ jobs:
           - service: auth-service
             image: auth-service
             context: auth-service
+          - service: enrollment-webapp
+            image: enrollment-webapp
+            context: enrollment-webapp
           - service: mail-service
             image: mail-service
             context: mail-service
@@ -71,9 +74,6 @@ jobs:
           - service: audit-service
             image: audit-service
             context: audit-service
-          - service: enrollment-webapp
-            image: enrollment-webapp
-            context: enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
