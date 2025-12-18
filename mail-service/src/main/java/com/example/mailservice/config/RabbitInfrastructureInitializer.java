@@ -51,6 +51,15 @@ public class RabbitInfrastructureInitializer {
                 rabbitAdmin.declareBinding(binding);
                 logger.info("RabbitMQ infrastructure declared: exchange={}, queue={}, binding created",
                         exchange.getName(), queue.getName());
+                
+                // Give a small grace period for the broker to stabilize permissions/connections
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+
                 try {
                     // Start listeners only after the broker is reachable and infrastructure is declared
                     listenerRegistry.start();
