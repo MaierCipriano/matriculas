@@ -14,7 +14,7 @@ jobs:
         service:
           - api-gateway
           - auth-service
-          - mail-service
+          # - mail-service
           - enrollment-service
           - audit-service
           # user-service omitido
@@ -65,9 +65,9 @@ jobs:
           - service: enrollment-webapp
             image: enrollment-webapp
             context: enrollment-webapp
-          - service: mail-service
-            image: mail-service
-            context: mail-service
+          # - service: mail-service
+          #   image: mail-service
+          #   context: mail-service
           - service: enrollment-service
             image: enrollment-service
             context: enrollment-service
