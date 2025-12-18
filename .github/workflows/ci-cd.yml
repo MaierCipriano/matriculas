@@ -71,6 +71,9 @@ jobs:
           - service: audit-service
             image: audit-service
             context: audit-service
+          - service: enrollment-webapp
+            image: enrollment-webapp
+            context: enrollment-webapp
           # user-service omitido
     steps:
       - name: Checkout
