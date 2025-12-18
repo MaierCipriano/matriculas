@@ -71,6 +71,9 @@ jobs:
           - service: enrollment-service
             image: enrollment-service
             context: enrollment-service
+          - service: enrollment-webapp
+            image: enrollment-webapp
+            context: enrollment-webapp
           - service: audit-service
             image: audit-service
             context: audit-service
