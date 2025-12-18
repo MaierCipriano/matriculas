@@ -211,6 +211,14 @@ jobs:
             if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
 
             $DC --env-file .env -f ./docker-compose.vm.yml pull
+
+            # CLEANUP: Force remove containers to bypass docker-compose 1.x 'ContainerConfig' bug
+            # This avoids the "KeyError: 'ContainerConfig'" when recreating containers from new images
+            echo "Removing existing containers to avoid recreation errors..."
+            $DC --env-file .env -f ./docker-compose.vm.yml down --remove-orphans || true
+            # Extra safety: remove by name pattern just in case
+            docker ps -aq --filter name=proy17 | xargs -r docker rm -f || true
+
             # Run compose up and collect diagnostics if it fails
             set +e
             echo "Starting docker compose up..."
